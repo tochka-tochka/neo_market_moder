@@ -1,49 +1,26 @@
-from rest_framework.decorators import api_view
+from rest_framework.parsers import JSONParser
+from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
-from src.serializes import QueueSerializer
-from src.models.moderation_queue import Queue
-import src.schemas as schemas
-from datetime import datetime
 
-@api_view(['GET'])
+from src.models.moderation import Ticket
+from src.serializers import TicketSerializer
+
+class NotFoundException(Exception):
+    pass
+
+@api_view(["POST"])
 def get_next_product(request):
+    parser_classes = [JSONParser]
     try:
-        next_product = Queue.objects.all()[:1]
+        if request.data["queue_priority"]:
+            next = Ticket.objects.filter(queue_priority=request.data["queue_priority"])[:1][0] or None
+        else:
+            next = Ticket.objects.all()[:1][0] or None
+            
+        if next is None:
+            return Response({"no products in queue"}, status=204)
+        serializer = TicketSerializer(next)
 
-        #grpc client.getNextProduct()
-        product = schemas.Product(
-            id = "11111111-1111-1111-1111-111111111111",
-            title="test",
-            description="test",
-            category=schemas.Category(
-                id= "11111111-1111-1111-1111-111111111111",
-                value="test"
-            ),
-            characteristics={
-                "test": "test",
-                "test": "test"
-            },
-            status=schemas.ProductStatus.ON_MODERATION,
-            seller=schemas.Seller(
-                username="test"
-            ),
-            images=[schemas.Image(
-                id="test",
-                url="test",
-                order=0,
-                created_at=datetime(2026, 1, 1)
-            )],
-            skus=[schemas.SKU(
-                id="test",
-                name="test",
-                price=1,
-                characteristics={
-                    "test": "test",
-                    "test": "test"
-                },
-                active_quantity=1
-            )]
-        )
-        return Response(product)
+        return Response(serializer.data)
     except Exception as e:
         return Response({"message": f"failed to get next product: {e}"}, status=500)

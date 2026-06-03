@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from src.models.moderation_queue import BlockReason
-from src.serializes import BlockReasonsSerializer
+from src.models.moderation import BlockReason
+from src.serializers import BlockReasonsSerializer
 
 @api_view(['GET'])
 def get_block_reasons(request):

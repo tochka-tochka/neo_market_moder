@@ -17,13 +17,22 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from src.api.block_reasons.views import get_block_reasons
-from src.api.descisions.views import accept, decline
+from src.api.descisions.views import approve_ticket, decline_ticket
 from src.api.queue.views import get_next_product
+from src.api.auth.reg import RegisterView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin', admin.site.urls),
 
-    path('api/v1/product-moderation/get-next/', get_next_product),
-    path('api/v1/products/<uuid:product_id>/approve/', accept),
-    path('api/v1/products/<uuid:product_id>/decline/', decline),
-    path('api/v1/product-blocking-resons/', get_block_reasons)
+    path('api/v1/reg', RegisterView.as_view(), name="register"),
+    path('api/v1/login', TokenObtainPairView.as_view(), name='login'),
+    path('api/v1/login/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('api/v1/queue/claim', get_next_product),
+    path('api/v1/tickets/<ticket_id>/approve', approve_ticket),
+    path('api/v1/tickets/<ticket_id>/block', decline_ticket),
+    path('api/v1/blocking-resons', get_block_reasons)
 ]
