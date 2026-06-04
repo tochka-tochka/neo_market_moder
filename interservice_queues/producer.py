@@ -14,8 +14,11 @@ class DecisionProd:
         )
 
     def send_decision(self, data):
-        self.channel.basic_publish(
-            queue="", routing_key="moder_decisions", body=json.dumps(data)
-        )
+        try:
+            self.channel.basic_publish(
+                exchange="", routing_key="moder_decisions", body=json.dumps(data)
+            )
+        except Exception as e:
+            raise e
 
 descision_queue = DecisionProd()

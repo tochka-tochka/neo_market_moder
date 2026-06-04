@@ -1,7 +1,10 @@
-from datetime import datetime
+import logging
 
 from django.conf import settings
-from rest_framework.decorators import api_view
+from django.utils import timezone
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import JSONParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from interservice_queues.producer import descision_queue
@@ -11,53 +14,79 @@ from src.models.moderation import (
     Ticket,
     TicketStatus,
 )
+from src.serializers import TicketSummarySerializer
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@parser_classes([JSONParser])
 def approve_ticket(request, ticket_id):
     try:
-        try:
-            ticket = Ticket.objects.get(id=ticket_id)
-        except Ticket.DoesNotExist:
+        ticket = Ticket.objects.filter(id=ticket_id).first()
+        if ticket is None:
             return Response(
-                {"message": "Product moderation entry not found"}, status=404
+                {"code": "NOT_FOUND", "message": "Product moderation entry not found"},
+                status=404,
             )
 
         if ticket.status == TicketStatus.HARD_BLOCKED:
-            return Response({"message": "Product is permanently blocked"}, status=409)
+            return Response(
+                {
+                    "code": "APPROVE_CONFLICT",
+                    "message": "Product is permanently blocked",
+                },
+                status=409,
+            )
 
         if ticket.status != TicketStatus.IN_REVIEW:
-            return Response({"message": "Product is not in review"}, status=409)
+            return Response(
+                {"code": "APPROVE_CONFLICT", "message": "Product is not in review"},
+                status=409,
+            )
 
-        if (
-            ticket.assigned_moderator
-            and ticket.assigned_moderator != request.user
-        ):
-            return Response({"message": "Not assigned to you"}, status=403)
+        if ticket.assigned_moderator and ticket.assigned_moderator != request.user:
+            return Response(
+                {"code": "NOT_OWNER", "message": "Not assigned to you"}, status=403
+            )
+
+        if len(ticket.json_after["skus"]) == 0:
+            return Response(
+                {
+                    "code": "APPROVE_CONFLICT",
+                    "message": "Product has no SKUs, cannot approve",
+                },
+                status=409,
+            )
 
         ticket.status = TicketStatus.MODERATED
-        ticket.decision_at = datetime.now()
-        ticket.moderator_comment = request.data.get("moderator_comment")
-        ticket.blocking_reason = None
+        ticket.decision_at = timezone.now()
+        ticket.decision_comment = request.data.get("comment")
         ticket.save()
+
+        ticket.blocking_reasons.all().delete()
 
         FieldReport.objects.filter(ticket=ticket).delete()
 
         descision_queue.send_decision(
             data={
-                "X-Service-Key": settings.MOD_TO_B2B_KEY,
+                "X-Service-Key": settings.B2B_SERVICE_KEY,
                 "product_id": str(ticket.product_id),
                 "status": TicketStatus.MODERATED,
             }
         )
-
-        return Response({"message": "Product approved successfully"}, status=200)
+        return Response(TicketSummarySerializer(ticket).data, status=200)
 
     except Exception as e:
-        return Response({"message": f"Failed to approve product: {e}"}, status=500)
+        logging.info(f"Failed to approve product: {str(e)}")
+        return Response(
+            {"code": "SERVER_ERROR"},
+            status=500,
+        )
 
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@parser_classes([JSONParser])
 def decline_ticket(request, ticket_id):
     try:
         try:
@@ -73,10 +102,7 @@ def decline_ticket(request, ticket_id):
         if ticket.status != TicketStatus.IN_REVIEW:
             return Response({"message": "Product is not in review"}, status=409)
 
-        if (
-            ticket.assigned_moderator
-            and ticket.assigned_moderator != request.user
-        ):
+        if ticket.assigned_moderator and ticket.assigned_moderator != request.user:
             return Response({"message": "Not assigned to you"}, status=403)
 
         blocking_reason_id = request.data.get("blocking_reason_id")
@@ -87,10 +113,11 @@ def decline_ticket(request, ticket_id):
         if blocking_reason is None:
             return Response({"message": "Blocking reason not found"}, status=400)
         ticket.status = TicketStatus.HARD_BLOCKED
-        ticket.decision_at = datetime.now()
-        ticket.blocking_reason = blocking_reason
-        ticket.moderator_comment = moderator_comment
+        ticket.decision_at = timezone.now()
+        ticket.decision_comment = moderator_comment
         ticket.save()
+
+        ticket.blocking_reasons.add(blocking_reason)
 
         FieldReport.objects.filter(ticket=ticket).delete()
 
@@ -110,7 +137,7 @@ def decline_ticket(request, ticket_id):
             }
         )
 
-        return Response({"message": "Product declined successfully"}, status=200)
+        return Response(TicketSummarySerializer(ticket).data, status=200)
 
     except Exception:
         return Response({"code": "SERVER_ERROR"}, status=500)

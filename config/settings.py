@@ -17,16 +17,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 from dotenv import load_dotenv
 import os
-import logging
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-logging.debug("logger level: INFO")
+B2B_SERVICE_KEY = os.environ.get("B2B_SERVICE_KEY")
+MODER_SERVICE_KEY = os.environ.get("MODER_SERVICE_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/

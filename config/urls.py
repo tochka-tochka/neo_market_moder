@@ -31,8 +31,8 @@ urlpatterns = [
     path('api/v1/login', TokenObtainPairView.as_view(), name='login'),
     path('api/v1/login/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 
-    path('api/v1/queue/claim', get_next_product),
-    path('api/v1/tickets/<ticket_id>/approve', approve_ticket),
-    path('api/v1/tickets/<ticket_id>/block', decline_ticket),
-    path('api/v1/blocking-resons', get_block_reasons)
+    path('api/v1/queue/claim', get_next_product, name="get-next"),
+    path('api/v1/tickets/<ticket_id>/approve', approve_ticket, name="approve"),
+    path('api/v1/tickets/<ticket_id>/block', decline_ticket, name="cancel"),
+    path('api/v1/blocking-reasons', get_block_reasons)
 ]
