@@ -48,7 +48,7 @@ class Ticket(models.Model):
     )
     blocking_reasons = models.ManyToManyField(BlockReason)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField()
+    updated_at = models.DateTimeField(auto_now=True)
     decision_at = models.DateTimeField(null=True, blank=True)
     claimed_at = models.DateTimeField(null=True, blank=True)
     claim_expires_at = models.DateTimeField(null=True, blank=True)

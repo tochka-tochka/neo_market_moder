@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 import pika
 import pytest
+import threading
+import time
 
 from src.models.moderation import BlockReason, Ticket, TicketKind, TicketStatus
 
@@ -42,6 +44,25 @@ def test_ticket(request, test_user):
         assigned_moderator=test_user,
     )
     return ticket
+
+@pytest.fixture
+def moderation_worker():
+    from interservice_queues.consumer.consumer import (
+        ProductEventsConsumer,
+    )
+
+    consumer_instance = ProductEventsConsumer()
+    consumer_thread = threading.Thread(
+        target=consumer_instance.channel.start_consuming, daemon=True
+    )
+    consumer_thread.start()
+    time.sleep(1)
+
+    yield consumer_thread
+
+    if consumer_instance.channel.is_open:
+        consumer_instance.channel.stop_consuming()
+    consumer_thread.join(timeout=1)
 
 
 class BaseTestUtil:
@@ -86,7 +107,6 @@ class BaseTestUtil:
             channel.basic_publish(
                 exchange="", routing_key="moder", body=json.dumps(data)
             )
-            print("MESSAGE SENT")
         finally:
             connection.close()
 
