@@ -1,3 +1,4 @@
+import logging
 import json
 import os
 
@@ -36,8 +37,9 @@ class ProductEventsConsumer:
 
     def process_product_event(self, channel, method, props, body):
         data = json.loads(body)
-        if data["X-Service-Key"] != MODER_SERVICE_KEY:
-            return Exception("Access Denied")
+        if "X-Service-Key" not in data or data["X-Service-Key"] != MODER_SERVICE_KEY:
+            logging.info("Access Denied")
+            return
 
         if EventsIdempotencyKeys.objects.filter(idempotency_key=data["idempotency_key"]).first() is not None:
             return

@@ -45,7 +45,7 @@ class TicketSerializer(serializers.ModelSerializer):
             "claimed_at",
             "claim_expires_at",
             "assigned_moderator_id",
-            "decision_comment"
+            "decision_comment",
             "blocking_reasons",
             "history",
         ]
