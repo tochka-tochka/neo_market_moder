@@ -1,3 +1,4 @@
+from src.serializers import TicketSerializer
 import json
 import os
 
@@ -21,7 +22,7 @@ class ProductNotFound(Exception):
 
 def process_created_event(data):
     try:
-        prev_product_state = Ticket.objects.filter(id=data["product_id"]).first()
+        prev_product_state = Ticket.objects.filter(product_id=data["product_id"]).first()
 
         if prev_product_state is not None:
             if prev_product_state.status == TicketStatus.HARD_BLOCKED:
@@ -30,7 +31,7 @@ def process_created_event(data):
         Ticket.objects.create(
             product_id=data["product_id"],
             seller_id=data["product"]["seller_id"],
-            json_after=json.loads(data["product"]),
+            json_after=data["product"],
             status=TicketStatus.PENDING,
         )
     except ProductHardBlocked:
@@ -42,7 +43,7 @@ def process_created_event(data):
         
 def process_edited_event(data):
     try:
-        prev_product_state = Ticket.objects.filter(id=data["product_id"]).first()
+        prev_product_state = Ticket.objects.filter(product_id=data["product_id"]).first()
 
         if prev_product_state is None:
             raise ProductNotFound
@@ -51,9 +52,9 @@ def process_edited_event(data):
             raise ProductHardBlocked
 
         prev_product_state.json_before = prev_product_state.json_after
-        prev_product_state.json_after = json.loads(data["product"])
+        prev_product_state.json_after = data["product"]
 
-        active_quantity = sum(list(map(lambda sku: sku.active_quantity, data["product"]["skus"])))
+        active_quantity = sum(list(map(lambda sku: sku["active_quantity"], data["product"]["skus"])))
         if prev_product_state.status == TicketStatus.BLOCKED:
             prev_product_state.queue_priority = 2
         elif active_quantity > 0:
@@ -73,7 +74,7 @@ def process_edited_event(data):
 
 def process_deleted_event(product_id):
     try:
-        prev_product_state = Ticket.objects.filter(id=product_id).first()
+        prev_product_state = Ticket.objects.filter(product_id=product_id).first()
 
         if prev_product_state is None:
             return

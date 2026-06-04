@@ -45,12 +45,13 @@ class TicketSerializer(serializers.ModelSerializer):
             "claimed_at",
             "claim_expires_at",
             "assigned_moderator_id",
+            "decision_comment"
             "blocking_reasons",
             "history",
         ]
 
-class TicketSummary(serializers.Serializer):
-    assigned_moderator_id = serializers.UUIDField(source="auth_user.id", read_only=True)
+class TicketSummarySerializer(serializers.ModelSerializer):
+    assigned_moderator_id = serializers.UUIDField(source="assigned_moderator.id", read_only=True)
 
     class Meta:
         model = Ticket

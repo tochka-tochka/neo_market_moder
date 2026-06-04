@@ -46,14 +46,14 @@ class Ticket(models.Model):
     queue_priority = models.IntegerField(
         choices=QueuePriority.choices, null=True, blank=True, default=1
     )
-    blocking_reason = models.ManyToManyField(BlockReason)
-    created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField()
-    decision_at = models.DateField()
-    claimed_at = models.DateField()
-    claim_expires_at = models.DateField()
+    blocking_reasons = models.ManyToManyField(BlockReason)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField()
+    decision_at = models.DateTimeField(null=True, blank=True)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    claim_expires_at = models.DateTimeField(null=True, blank=True)
     assigned_moderator = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True)
-    moderator_comment = models.TextField(null=True, blank=True)
+    decision_comment = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "tickets"
@@ -83,10 +83,13 @@ class Decision(models.Model):
 
 class FieldReport(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    product_moderation = models.ForeignKey(Ticket, on_delete=models.CASCADE)
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
     field_name = models.CharField(max_length=255)
     old_value = models.TextField()
     new_value = models.TextField()
 
     class Meta:
         db_table = "field_reports"
+
+class EventsIdempotencyKeys(models.Model):
+    idempotency_key = models.UUIDField(editable=False)
