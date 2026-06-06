@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from src.api.block_reasons.views import get_block_reasons
+from src.api.block_reasons.views import get_block_reasons, deactivate_block_reason
 from src.api.descisions.views import approve_ticket, decline_ticket
 from src.api.queue.views import get_next_product
 from src.api.auth.reg import RegisterView
@@ -34,5 +34,6 @@ urlpatterns = [
     path('api/v1/queue/claim', get_next_product, name="get-next"),
     path('api/v1/tickets/<ticket_id>/approve', approve_ticket, name="approve"),
     path('api/v1/tickets/<ticket_id>/block', decline_ticket, name="block"),
-    path('api/v1/blocking-resons', get_block_reasons)
+    path('api/v1/blocking-reasons', get_block_reasons, name="block-reasons"),
+    path('api/v1/blocking-reasons/<reason_id>', deactivate_block_reason, name="deactivate-block-reason"),
 ]
