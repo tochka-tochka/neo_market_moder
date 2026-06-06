@@ -11,7 +11,7 @@ from rest_framework.reverse import reverse
 
 from config.settings import MODER_SERVICE_KEY
 from src.models.moderation import Ticket, TicketKind, TicketStatus
-from src.tests.fixtures import BaseTestUtil, test_block_reason, test_ticket, moderation_worker
+from src.tests.fixtures import BaseTestUtil, test_soft_block_reason, test_ticket, moderation_worker
 
 
 @pytest.mark.django_db(transaction=True)

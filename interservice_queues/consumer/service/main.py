@@ -95,5 +95,4 @@ def process_deleted_event(data):
         prev_product_state.delete()
 
     except Exception as e:
-        print(f"failed to proccess product event: {e}")
         return Exception(f"failed to proccess product event: {e}")
