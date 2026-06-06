@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
 
+    'django_celery_beat',
+
     'src.apps.SrcConfig'
 ]
 
@@ -142,4 +144,16 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
+CELERY_TIMEZONE = 'Asia/Yekaterinburg'
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CELERY_BEAT_SCHEDULE = {
+    'run-every-30-seconds': {
+        'task': 'src.tasks.update_expired_tickets',
+        'schedule': 60.0,
+    },
 }

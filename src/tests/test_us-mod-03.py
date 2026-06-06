@@ -11,27 +11,7 @@ from rest_framework.reverse import reverse
 
 from config.settings import MODER_SERVICE_KEY
 from src.models.moderation import Ticket, TicketKind, TicketStatus
-from src.tests.fixtures import BaseTestUtil, test_block_reason, test_ticket
-
-
-@pytest.fixture
-def moderation_worker():
-    from interservice_queues.consumer.consumer import (
-        ProductEventsConsumer,
-    )
-
-    consumer_instance = ProductEventsConsumer()
-    consumer_thread = threading.Thread(
-        target=consumer_instance.channel.start_consuming, daemon=True
-    )
-    consumer_thread.start()
-    time.sleep(1)
-
-    yield consumer_thread
-
-    if consumer_instance.channel.is_open:
-        consumer_instance.channel.stop_consuming()
-    consumer_thread.join(timeout=1)
+from src.tests.fixtures import BaseTestUtil, test_block_reason, test_ticket, moderation_worker
 
 
 @pytest.mark.django_db(transaction=True)
