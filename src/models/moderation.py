@@ -80,13 +80,17 @@ class Decision(models.Model):
         db_table = "decisions"
         ordering = ["-at"]
 
+class FieldReportSeverity(models.TextChoices):
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
 
 class FieldReport(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
-    field_name = models.CharField(max_length=255)
-    old_value = models.TextField()
-    new_value = models.TextField()
+    field_path = models.CharField(max_length=255)
+    message = models.TextField()
+    severity = models.TextField(choices=FieldReportSeverity)
 
     class Meta:
         db_table = "field_reports"

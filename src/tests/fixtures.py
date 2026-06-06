@@ -10,12 +10,23 @@ from src.models.moderation import BlockReason, Ticket, TicketKind, TicketStatus
 
 
 @pytest.fixture
-def test_block_reason():
+def test_soft_block_reason():
     reason = BlockReason.objects.create(
         code="TST-RSN",
         title="test",
         description="test",
         hard_block=False,
+        is_active=True,
+    )
+    return reason
+
+@pytest.fixture
+def hard_soft_block_reason():
+    reason = BlockReason.objects.create(
+        code="TST-RSN-HRD",
+        title="test",
+        description="test",
+        hard_block=True,
         is_active=True,
     )
     return reason
