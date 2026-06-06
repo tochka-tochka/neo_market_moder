@@ -1,4 +1,5 @@
 import logging
+import re
 
 from django.conf import settings
 from django.utils import timezone
@@ -14,7 +15,7 @@ from src.models.moderation import (
     Ticket,
     TicketStatus,
 )
-from src.serializers import TicketSummarySerializer
+from src.serializers import BlockReasonsMessageSerializer, TicketSummarySerializer
 
 
 @api_view(["POST"])
@@ -84,35 +85,80 @@ def approve_ticket(request, ticket_id):
         )
 
 
+def check_filed(data, field_str):
+    tokens = re.findall(r"[^.\[\]]+", field_str)
+
+    current = data
+    for token in tokens:
+        if token.isdigit():
+            index = int(token)
+            if isinstance(current, list) and 0 <= index < len(current):
+                current = current[index]
+            else:
+                return False
+        else:
+            if isinstance(current, dict) and token in current:
+                current = current[token]
+            else:
+                return False
+
+    return True
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @parser_classes([JSONParser])
 def decline_ticket(request, ticket_id):
     try:
-        try:
-            ticket = Ticket.objects.get(id=ticket_id)
-        except Ticket.DoesNotExist:
+        ticket = Ticket.objects.filter(id=ticket_id).first()
+        if ticket is None:
             return Response(
-                {"message": "Product moderation entry not found"}, status=404
+                {"code": "NOT_FOUND", "message": "Product moderation entry not found"},
+                status=404,
             )
 
         if ticket.status == TicketStatus.HARD_BLOCKED:
-            return Response({"message": "Product is permanently blocked"}, status=409)
+            return Response(
+                {
+                    "code": "DECLINE_CONFLICT",
+                    "message": "Product is permanently blocked",
+                },
+                status=409,
+            )
 
         if ticket.status != TicketStatus.IN_REVIEW:
-            return Response({"message": "Product is not in review"}, status=409)
+            return Response(
+                {"code": "DECLINE_CONFLICT", "message": "Product is not in review"},
+                status=409,
+            )
 
         if ticket.assigned_moderator and ticket.assigned_moderator != request.user:
-            return Response({"message": "Not assigned to you"}, status=403)
+            return Response(
+                {"code": "NOT_OWNER", "message": "Not assigned to you"}, status=403
+            )
 
-        blocking_reason_id = request.data.get("blocking_reason_id")
-        moderator_comment = request.data.get("moderator_comment")
+        blocking_reason_ids = request.data.get("blocking_reason_ids")
+        moderator_comment = request.data.get("comment")
         field_reports_data = request.data.get("field_reports", [])
 
-        blocking_reason = BlockReason.objects.filter(id=blocking_reason_id).first()
-        if blocking_reason is None:
-            return Response({"message": "Blocking reason not found"}, status=400)
-        ticket.status = TicketStatus.HARD_BLOCKED
+        blocking_reasons = []
+        for id in blocking_reason_ids:
+            blocking_reason = BlockReason.objects.filter(id=id).first()
+            if blocking_reason is None:
+                return Response(
+                    {
+                        "code": "WRONG_BLOCK_REASON_ID",
+                        "message": "Blocking reason not found",
+                    },
+                    status=400,
+                )
+            ticket.status = (
+                TicketStatus.HARD_BLOCKED
+                if blocking_reason.hard_block
+                else TicketStatus.BLOCKED
+            )
+            blocking_reasons.append(blocking_reason)
+
         ticket.decision_at = timezone.now()
         ticket.decision_comment = moderator_comment
         ticket.save()
@@ -122,18 +168,31 @@ def decline_ticket(request, ticket_id):
         FieldReport.objects.filter(ticket=ticket).delete()
 
         for report_data in field_reports_data:
+            if not check_filed(ticket.json_after, report_data["field_path"]):
+                return Response(
+                    {
+                        "code": "WRONG_FIELD_PATH",
+                        "message": f"Provided path {report_data['field_path']} invalid",
+                    },
+                    status=400,
+                )
             FieldReport.objects.create(
                 ticket=ticket,
-                field_name=report_data.get("field_name"),
-                old_value=report_data.get("old_value"),
-                new_value=report_data.get("new_value"),
+                field_path=report_data.get("field_path"),
+                message=report_data.get("message"),
+                severity=report_data.get("severity"),
             )
 
         descision_queue.send_decision(
             data={
-                "X-Service-Key": settings.MOD_TO_B2B_KEY,
+                "X-Service-Key": settings.B2B_SERVICE_KEY,
                 "product_id": str(ticket.product_id),
-                "status": TicketStatus.HARD_BLOCKED,
+                "status": "BLOCKED",
+                "hard_blocked": ticket.status == TicketStatus.HARD_BLOCKED,
+                "blocking_reason": BlockReasonsMessageSerializer(
+                    blocking_reasons, many=True
+                ).data,
+                "filed_reports": field_reports_data,
             }
         )
 

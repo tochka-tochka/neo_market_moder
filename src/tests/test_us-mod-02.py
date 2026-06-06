@@ -1,24 +1,29 @@
-from rest_framework import status
-from rest_framework.reverse import reverse
+import queue
+import threading
 import uuid
+from datetime import datetime, timedelta
+
 import pytest
 from django import db
-import threading
+from django.contrib.auth.models import User
+from django.test import TransactionTestCase
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.test import TransactionTestCase
-from datetime import datetime, timedelta
-import queue
 
-from django.utils import timezone
-from django.contrib.auth.models import User
-
+from src.models.moderation import Ticket, TicketKind, TicketStatus
 from src.tests.fixtures import test_block_reason
-from src.models.moderation import Ticket, TicketStatus, TicketKind
+
 
 @pytest.fixture
 def test_tickets_queue(request, test_user):
-    statuses = getattr(request, "param", [TicketStatus.PENDING, TicketStatus.PENDING, TicketStatus.PENDING])
+    statuses = getattr(
+        request,
+        "param",
+        [TicketStatus.PENDING, TicketStatus.PENDING, TicketStatus.PENDING],
+    )
 
     ticket1 = Ticket.objects.create(
         product_id=uuid.uuid4(),
@@ -68,9 +73,10 @@ def test_tickets_queue(request, test_user):
         assigned_moderator=None,
     )
     return ticket1, ticket2, ticket3
-    
+
+
 @pytest.mark.django_db(transaction=True)
-class TestGettingNextTicket():
+class TestGettingNextTicket:
     def test_next_returns_oldest_pending(self, jwt_client, test_tickets_queue):
         ticket1, ticket2, ticket3 = test_tickets_queue
         url = reverse("get-next")
@@ -86,14 +92,18 @@ class TestGettingNextTicket():
 
         user1 = User.objects.create_user(username="moderator1", password="password123")
         client1 = APIClient()
-        client1.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user1).access_token}')
+        client1.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user1).access_token}"
+        )
 
         user2 = User.objects.create_user(username="moderator2", password="password123")
         client2 = APIClient()
-        client2.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user2).access_token}')
+        client2.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user2).access_token}"
+        )
 
         q = queue.Queue()
-        
+
         barrier = threading.Barrier(2)
 
         def make_request(client, queue_to_put):
@@ -122,7 +132,7 @@ class TestGettingNextTicket():
 
         assert res1.status_code == status.HTTP_200_OK, res1.json()
         assert res2.status_code == status.HTTP_200_OK, res2.json()
-        
+
         assert res1.json()["id"] != res2.json()["id"]
 
     def test_empty_queue_returns_204(self, jwt_client):
@@ -132,11 +142,13 @@ class TestGettingNextTicket():
 
         assert response.status_code == status.HTTP_204_NO_CONTENT, response.json()
 
-    def test_moderator_already_has_in_review_returns_409(self, jwt_client, test_tickets_queue):
+    def test_moderator_already_has_in_review_returns_409(
+        self, jwt_client, test_tickets_queue
+    ):
         url = reverse("get-next")
 
         jwt_client.post(url)
 
         response = jwt_client.post(url)
-        
+
         assert response.status_code == status.HTTP_409_CONFLICT, response.json()

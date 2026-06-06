@@ -16,6 +16,14 @@ class BlockReasonsSerializer(serializers.ModelSerializer):
             "is_active",
         ]
 
+class BlockReasonsMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlockReason
+        fields = [
+            "id",
+            "title",
+            "description",
+        ]
 
 class DecisionSerializer(serializers.ModelSerializer):
     class Meta:
