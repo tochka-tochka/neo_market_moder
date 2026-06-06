@@ -82,7 +82,7 @@ class Decision(models.Model):
 
 class FieldReportSeverity(models.TextChoices):
     INFO = "INFO"
-    WARNING = "WARNING"
+    WARNNING = "WARNING"
     ERROR = "ERROR"
 
 class FieldReport(models.Model):

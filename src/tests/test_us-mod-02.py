@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from src.models.moderation import Ticket, TicketKind, TicketStatus
-from src.tests.fixtures import test_block_reason
+from src.tests.fixtures import test_soft_block_reason
 
 
 @pytest.fixture

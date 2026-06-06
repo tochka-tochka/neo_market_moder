@@ -21,7 +21,7 @@ def test_soft_block_reason():
     return reason
 
 @pytest.fixture
-def hard_soft_block_reason():
+def test_hard_block_reason():
     reason = BlockReason.objects.create(
         code="TST-RSN-HRD",
         title="test",

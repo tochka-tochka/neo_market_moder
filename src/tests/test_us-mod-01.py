@@ -14,7 +14,7 @@ from src.serializers import TicketSerializer
 from src.tests.fixtures import (
     BaseTestUtil,
     moderation_worker,
-    test_block_reason,
+    test_soft_block_reason,
     test_ticket,
 )
 
