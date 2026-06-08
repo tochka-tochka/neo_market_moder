@@ -1,5 +1,6 @@
 import logging
 import re
+import uuid
 
 from django.conf import settings
 from django.utils import timezone
@@ -71,6 +72,7 @@ def approve_ticket(request, ticket_id):
         descision_queue.send_decision(
             data={
                 "X-Service-Key": settings.B2B_SERVICE_KEY,
+                "idempotency_key": str(uuid.uuid4()),
                 "product_id": str(ticket.product_id),
                 "status": TicketStatus.MODERATED,
             }
