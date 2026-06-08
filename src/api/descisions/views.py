@@ -161,11 +161,20 @@ def decline_ticket(request, ticket_id):
             )
             blocking_reasons.append(blocking_reason)
 
+        if len(blocking_reasons) < 1:
+            return Response(
+                {
+                    "code": "NO_BLOCK_REASONS",
+                    "message": "must be at least 1 blocking reason",
+                },
+                status=400,
+            )
+
         ticket.decision_at = timezone.now()
         ticket.decision_comment = moderator_comment
         ticket.save()
 
-        ticket.blocking_reasons.add(blocking_reason)
+        ticket.blocking_reasons.add(*blocking_reasons)
 
         FieldReport.objects.filter(ticket=ticket).delete()
 
@@ -188,13 +197,12 @@ def decline_ticket(request, ticket_id):
         descision_queue.send_decision(
             data={
                 "X-Service-Key": settings.B2B_SERVICE_KEY,
+                "idempotency_key": str(uuid.uuid4()),
                 "product_id": str(ticket.product_id),
                 "status": "BLOCKED",
-                "hard_blocked": ticket.status == TicketStatus.HARD_BLOCKED,
-                "blocking_reason": BlockReasonsMessageSerializer(
-                    blocking_reasons, many=True
-                ).data,
-                "filed_reports": field_reports_data,
+                "hard_block": ticket.status == TicketStatus.HARD_BLOCKED,
+                "blocking_reason": BlockReasonsMessageSerializer(blocking_reasons[0]).data,
+                "field_reports": field_reports_data,
             }
         )
 

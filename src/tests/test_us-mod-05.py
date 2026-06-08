@@ -70,7 +70,7 @@ class TestSoftBlock(BaseTestUtil):
 
         assert msg is not None
         assert msg["status"] == TicketStatus.BLOCKED
-        assert msg["hard_blocked"]
+        assert msg["hard_block"]
 
     def test_any_modify_on_hard_blocked_returns_403(
         self, jwt_client, test_ticket, test_hard_block_reason
