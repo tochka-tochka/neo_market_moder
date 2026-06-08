@@ -33,6 +33,10 @@ def get_next_product(request):
             )
         queue = Q(status=TicketStatus.PENDING)
         if "queue_priority" in request.data:
+            if not (1 <= request.data["queue_priority"] <= 4):
+                return Response(
+                    {"code": "INVALID_QUEUE", "message": "invalid queue_priority value"}, status=400
+                )
             queue &= Q(queue_priority=request.data["queue_priority"])
 
         next = Ticket.objects.select_for_update(skip_locked=True).filter(queue).first()

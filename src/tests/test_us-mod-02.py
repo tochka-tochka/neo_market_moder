@@ -30,7 +30,7 @@ def test_tickets_queue(request, test_user):
         seller_id=uuid.uuid4(),
         kind=TicketKind.CREATE,
         status=statuses[0],
-        queue_priority=1,
+        queue_priority=2,
         json_after={
             "price": 100,
             "status": "new",
@@ -85,7 +85,7 @@ class TestGettingNextTicket:
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         assert response.json()["status"] == TicketStatus.IN_REVIEW
-        assert response.json()["id"] == str(ticket1.id)
+        assert response.json()["id"] == str(ticket2.id)
 
     def test_concurrent_two_moderators_get_different_cards(self, test_tickets_queue):
         url = reverse("get-next")

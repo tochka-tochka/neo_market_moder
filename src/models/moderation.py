@@ -57,7 +57,7 @@ class Ticket(models.Model):
 
     class Meta:
         db_table = "tickets"
-        ordering = ["updated_at", "queue_priority"]
+        ordering = ["queue_priority", "updated_at"]
 
 class ModerActions(models.TextChoices):
     CREATED = "CREATED"
