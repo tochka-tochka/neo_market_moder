@@ -60,7 +60,7 @@ class TestSoftBlock(BaseTestUtil):
 
         assert msg is not None
         assert msg["status"] == TicketStatus.BLOCKED
-        assert not msg["hard_blocked"]
+        assert not msg["hard_block"]
 
     def test_soft_block_unknown_reason_returns_400(
         self, jwt_client, test_ticket, test_soft_block_reason
