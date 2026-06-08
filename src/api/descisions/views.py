@@ -37,7 +37,7 @@ def approve_ticket(request, ticket_id):
                     "code": "HARD_BLOCK",
                     "message": "Product is permanently blocked",
                 },
-                status=403,
+                status=409,
             )
 
         if ticket.status != TicketStatus.IN_REVIEW:
@@ -125,7 +125,7 @@ def decline_ticket(request, ticket_id):
                     "code": "HARD_BLOCK",
                     "message": "Product is permanently blocked",
                 },
-                status=403,
+                status=409,
             )
 
         if ticket.status != TicketStatus.IN_REVIEW:

@@ -72,7 +72,7 @@ class TestSoftBlock(BaseTestUtil):
         assert msg["status"] == TicketStatus.BLOCKED
         assert msg["hard_block"]
 
-    def test_any_modify_on_hard_blocked_returns_403(
+    def test_any_modify_on_hard_blocked_returns_409(
         self, jwt_client, test_ticket, test_hard_block_reason
     ):
         url = reverse("block", args=[test_ticket.id])
@@ -95,10 +95,10 @@ class TestSoftBlock(BaseTestUtil):
         approve_url = reverse("approve", args=[test_ticket.id])
 
         response = jwt_client.post(approve_url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+        assert response.status_code == status.HTTP_409_CONFLICT, response.json()
 
         response = jwt_client.post(url, data=payload, content_type="application/json")
-        assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()
+        assert response.status_code == status.HTTP_409_CONFLICT, response.json()
 
     def test_edited_event_on_hard_blocked_is_ignored(
         self,
