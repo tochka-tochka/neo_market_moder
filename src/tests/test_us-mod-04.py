@@ -59,7 +59,7 @@ class TestSoftBlock(BaseTestUtil):
         msg = self.get_rabbitmq_message("moder_decisions")
 
         assert msg is not None
-        assert msg["status"] == TicketStatus.BLOCKED
+        assert msg["event_type"] == TicketStatus.BLOCKED
         assert not msg["hard_block"]
 
     def test_soft_block_unknown_reason_returns_400(
