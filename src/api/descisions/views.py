@@ -60,9 +60,10 @@ def approve_ticket(request, ticket_id):
                 status=409,
             )
 
-        ticket.status = TicketStatus.MODERATED
+        ticket.status = TicketStatus.APPROVED
         ticket.decision_at = timezone.now()
         ticket.decision_comment = request.data.get("comment")
+        ticket.assigned_moderator = None
         ticket.save()
 
         ticket.blocking_reasons.all().delete()
@@ -74,7 +75,8 @@ def approve_ticket(request, ticket_id):
                 "X-Service-Key": settings.B2B_SERVICE_KEY,
                 "idempotency_key": str(uuid.uuid4()),
                 "product_id": str(ticket.product_id),
-                "status": TicketStatus.MODERATED,
+                "event_type": "MODERATED",
+                "occurred_at": timezone.now().isoformat()
             }
         )
         return Response(TicketSummarySerializer(ticket).data, status=200)

@@ -25,7 +25,7 @@ class TestTicketApprove(BaseTestUtil):
 
         assert response.status_code == status.HTTP_200_OK, response.json()
         assert response.json()["product_id"] == test_ticket.product_id
-        assert response.json()["status"] == TicketStatus.MODERATED
+        assert response.json()["status"] == TicketStatus.APPROVED
 
         msg = self.get_rabbitmq_message("moder_decisions")
 

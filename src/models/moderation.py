@@ -25,6 +25,7 @@ class QueuePriority(models.IntegerChoices):
 
 class TicketStatus(models.TextChoices):
     MODERATED = "MODERATED"
+    APPROVED = "APPROVED"
     IN_REVIEW = "IN_REVIEW"
     PENDING = "PENDING"
     BLOCKED = "BLOCKED"
@@ -82,7 +83,7 @@ class Decision(models.Model):
 
 class FieldReportSeverity(models.TextChoices):
     INFO = "INFO"
-    WARNNING = "WARNING"
+    WARNING = "WARNING"
     ERROR = "ERROR"
 
 class FieldReport(models.Model):
