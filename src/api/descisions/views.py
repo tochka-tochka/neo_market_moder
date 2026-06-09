@@ -172,6 +172,7 @@ def decline_ticket(request, ticket_id):
 
         ticket.decision_at = timezone.now()
         ticket.decision_comment = moderator_comment
+        ticket.assigned_moderator = None
         ticket.save()
 
         ticket.blocking_reasons.add(*blocking_reasons)
@@ -193,16 +194,24 @@ def decline_ticket(request, ticket_id):
                 message=report_data.get("message"),
                 severity=report_data.get("severity"),
             )
+        field_reports_msg = [
+            {
+                "field_name": report_data.get("field_path"),
+                "comment": report_data.get("message"),
+            }
+            for report_data in field_reports_data
+        ]
 
         descision_queue.send_decision(
             data={
                 "X-Service-Key": settings.B2B_SERVICE_KEY,
                 "idempotency_key": str(uuid.uuid4()),
                 "product_id": str(ticket.product_id),
-                "status": "BLOCKED",
+                "event_type": "BLOCKED",
                 "hard_block": ticket.status == TicketStatus.HARD_BLOCKED,
-                "blocking_reason": BlockReasonsMessageSerializer(blocking_reasons[0]).data,
-                "field_reports": field_reports_data,
+                "blocking_reason_id": str(blocking_reasons[0].id),
+                "field_reports": field_reports_msg,
+                "occurred_at": timezone.now().isoformat(),
             }
         )
 
