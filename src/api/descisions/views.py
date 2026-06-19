@@ -3,6 +3,7 @@ import re
 import uuid
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import JSONParser
@@ -76,7 +77,7 @@ def approve_ticket(request, ticket_id):
                 "idempotency_key": str(uuid.uuid4()),
                 "product_id": str(ticket.product_id),
                 "event_type": "MODERATED",
-                "occurred_at": timezone.now().isoformat()
+                "occurred_at": timezone.now().isoformat(),
             }
         )
         return Response(TicketSummarySerializer(ticket).data, status=200)
@@ -89,7 +90,7 @@ def approve_ticket(request, ticket_id):
         )
 
 
-def check_filed(data, field_str):
+def check_field(data, field_str):
     tokens = re.findall(r"[^.\[\]]+", field_str)
 
     current = data
@@ -112,6 +113,7 @@ def check_filed(data, field_str):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @parser_classes([JSONParser])
+@transaction.atomic
 def decline_ticket(request, ticket_id):
     try:
         ticket = Ticket.objects.filter(id=ticket_id).first()
@@ -142,6 +144,15 @@ def decline_ticket(request, ticket_id):
             )
 
         blocking_reason_ids = request.data.get("blocking_reason_ids")
+        if blocking_reason_ids is None or blocking_reason_ids == []:
+            return Response(
+                {
+                    "code": "MISSING_BLOCKING_REASON_IDS",
+                    "message": "Blocking reason IDs are required",
+                },
+                status=400,
+            )
+
         moderator_comment = request.data.get("comment")
         field_reports_data = request.data.get("field_reports", [])
 
@@ -175,14 +186,13 @@ def decline_ticket(request, ticket_id):
         ticket.decision_at = timezone.now()
         ticket.decision_comment = moderator_comment
         ticket.assigned_moderator = None
-        ticket.save()
 
         ticket.blocking_reasons.add(*blocking_reasons)
 
         FieldReport.objects.filter(ticket=ticket).delete()
 
         for report_data in field_reports_data:
-            if not check_filed(ticket.json_after, report_data["field_path"]):
+            if not check_field(ticket.json_after, report_data["field_path"]):
                 return Response(
                     {
                         "code": "WRONG_FIELD_PATH",
@@ -190,12 +200,17 @@ def decline_ticket(request, ticket_id):
                     },
                     status=400,
                 )
+                
+        for report_data in field_reports_data:
             FieldReport.objects.create(
                 ticket=ticket,
                 field_path=report_data.get("field_path"),
                 message=report_data.get("message"),
                 severity=report_data.get("severity"),
             )
+
+        ticket.save()
+
         field_reports_msg = [
             {
                 "field_name": report_data.get("field_path"),
